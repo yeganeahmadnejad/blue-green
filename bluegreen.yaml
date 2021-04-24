@@ -1,0 +1,90 @@
+---
+- hosts: [vms]
+  become: true
+  vars:
+    allowed_ports: 
+      - 3001 
+      - 3002
+    tag: 2.0
+    nginx_path: /etc/nginx
+    nginx_sites: /etc/nginx/conf.d
+
+  tasks:
+
+  - name: check open port from allowed_ports
+    shell: netstat -nlt4 | grep -oP '(?<=0.0.0.0:)(\d+)' 
+    register: used_ports 
+
+  - name: Set bind_port as first available port 
+    set_fact: 
+      bindport: "{{ allowed_ports | difference(used_ports.stdout_lines | map('int') | list) | first | default(0) }}"
+    failed_when: bindport | int == 0 
+
+  - name: Show bind port 
+    debug: var=bindport
+
+  - name: set current and future env color for case open port is 3001
+    set_fact:
+      env_color_f: "blue"
+      env_color_c: "green"
+    when: bindport=="3001"
+
+  - name: set current and future env color for case open port is 3002
+    set_fact:
+      env_color_c: "blue"
+      env_color_f: "green"
+    when: bindport=="3002"
+
+  - name: show next deployment env color 
+    debug: env=env_color_f
+    ignore_errors: true
+
+  - name: docker run new tag image version
+    shell: docker run --name {{env_color_f}} -d -p {{bindport}}:3000 yeganx/blue:{{tag}}
+
+  - name: check new version health status of new deployment
+    uri:
+      url: http://localhost:{{bindport}}/healthz
+      method: GET
+      return_content: yes
+    register: results
+    ignore_errors: true
+
+  - name: show respose status of new deployment
+    debug: msg={{results.status}}
+
+  - name: decide to go to new version or not
+    shell:  echo {{results.status}}
+    when: results.status==200
+    ignore_errors: true
+
+  - name: Roleback deployment if it is not healthy
+    shell: |
+      docker kill {{ env_color_f }}
+      docker rm {{ env_color_f }}
+    when: results.status==500
+
+  - name: Setup nginx vhost from template
+    template:
+      src=vhost.tpl
+      dest={{ nginx_sites }}/vhost.conf
+    when: results.status==200
+
+  - name: reload nginx to setup configs to new deployment this action is not occuring any down time according to nginx claim
+    service:
+      name=nginx
+      state=reloaded
+    when: results.status==200
+
+  - name: docker kill prev container
+    shell: |
+      docker kill {{env_color_c}}
+      docker rm {{env_color_c}}
+    when: results.status==200
+
+  handlers:
+  - name: reload nginx
+    service:
+      name=nginx
+      state=reloaded
+
