@@ -1,0 +1,77 @@
+---
+- hosts: [vms]
+  become: true
+  vars:
+    nginx_path: /etc/nginx
+    nginx_sites: /etc/nginx/conf.d
+  tasks:
+  - name: install epel
+    yum: name=epel-release state=latest
+  - name: install openconnect
+    yum: name=openvpn state=latest
+    ignore_errors: yes
+  - name: install tmux
+    yum: name=tmux state=latest
+  - name: creating a docker repository
+    yum_repository:
+         description: repo for docker
+         name: docker-ce
+         baseurl: https://download.docker.com/linux/centos/7/x86_64/stable/
+         gpgcheck: no
+  - name: installing docker
+    package:
+         name: docker-ce
+         state: present
+    notify: start docker
+    ignore_errors: yes 
+  - name: starting docker services
+    service:
+          name: docker
+          state: started
+  - name: installing docker SDK
+    command: "pip3 install docker"
+
+  - name: add repository nginx-release (CentOS6/CentOS7)
+    yum: name="http://nginx.org/packages/centos/{{ansible_distribution_major_version}}/noarch/RPMS/nginx-release-centos-{{ansible_distribution_major_version}}-0.el{{ansible_distribution_major_version}}.ngx.noarch.rpm"
+
+  - name: install nginx
+    yum: name=nginx state=present enablerepo=nginx
+
+  - name: setup selinux config
+    shell: setsebool -P httpd_can_network_connect 1
+
+  - name: Start Nginx
+    service: name=nginx enabled=yes state=started
+    notify: restart nginx
+
+  - name: Install firewalld
+    yum:
+      name: firewalld
+      state: latest
+  - name: stoped firewalld
+    service:
+      name: firewalld
+      state: stopped
+      enabled: no
+    become: yes
+
+  - name: permit traffic in default zone on port 3000/tcp
+    firewalld:
+      port: 3000/tcp
+      permanent: yes
+      state: enabled
+    become: yes
+
+  handlers:
+  - name: start docker
+    service: name=docker enabled=yes state=started
+
+  - name: restart nginx
+    service:
+      name=nginx
+      state=restarted
+
+  - name: reload nginx
+    service:
+      name=nginx
+      state=reloaded
