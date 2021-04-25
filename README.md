@@ -30,4 +30,5 @@ please note because of my poor internet connection I couldn't push my images to 
 by tag variable we specify version of deploymen, if the newer version of deployment is healthy, application will be updated without any down time else 
 the older healthy version will stay as our stable deployment.
 also it's possible to rollback to the previous versions by specifying the tag.
+
 note: you can find images of deployment env on assets folder.
