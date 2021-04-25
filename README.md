@@ -15,7 +15,7 @@ please follow this steps by order:
 
 **1.An ansible playbook for setting up and configuring the VMs**
 
-ansible-playbook presetup.yaml -i inventory/sample/hosts.yml 
+ansible-playbook presetup.yaml -i inventory/sample/hosts.yml   
 
 **2.An ansible playbook for building and pushing docker images**
 
