@@ -8,7 +8,7 @@ I also set my blue and green environment mapped to 3001, 3002 port numbers to mi
 
 this playbook runs on 3 VMs and moves between blue and green env in new deployment without knowing the env of other VMs. 
 
-(there is no problem if one of container start in green and the other start from the blue state in cases we add a new VM our infra deployment VMs)
+(there is no problem if one of container start in green and the other start from the blue state in cases we add a new VM to our infra deployment VMs)
 
 
 please follow this steps by order:
@@ -27,7 +27,7 @@ please note because of my poor internet connection I couldn't push my images to 
 
 #ansible-playbook --extra-vars 'tag=2.0' bluegreen.yaml -i inventory/sample/hosts.yml
 
-by tag variable we specify version of deploymen, if the newer version of deployment is healthy, application will be updated without any down time else 
+by tag variable we specify version of deployment, if the newer version of deployment is healthy, application will be updated without any down time else 
 the older healthy version will stay as our stable deployment.
 also it's possible to rollback to the previous versions by specifying the tag.
 
